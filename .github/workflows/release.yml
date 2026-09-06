@@ -1,0 +1,134 @@
+name: Build & Release Android APK (Fork & On-Demand)
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Android Build Type'
+        required: true
+        default: 'debug'
+        type: choice
+        options:
+          - debug
+      publish_release:
+        description: 'Publish as GitHub Release'
+        required: true
+        default: true
+        type: boolean
+      release_tag:
+        description: 'Release tag (default: auto from version or latest-test)'
+        required: false
+        default: ''
+        type: string
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Setup Java 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Extract App Version
+        id: get_version
+        run: |
+          VERSION_NAME=$(node -e "import('./src/updates.js').then(m => console.log(m.UPDATES[0].version))" 2>/dev/null || grep -oP 'versionName\s+"\K[^"]+' android/app/build.gradle)
+          echo "version=${VERSION_NAME}" >> "$GITHUB_OUTPUT"
+          
+          TAG_NAME="${{ github.event.inputs.release_tag }}"
+          if [ -z "$TAG_NAME" ]; then
+            if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+              TAG_NAME="${{ github.ref_name }}"
+            else
+              TAG_NAME="v${VERSION_NAME}-test"
+            fi
+          fi
+          echo "tag=${TAG_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Web Application
+        run: npm run build
+
+      - name: Sync Capacitor Android
+        run: npx cap sync android
+
+      - name: Build Debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug
+
+      - name: Prepare APK Output
+        id: package_apk
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          APK_NAME="FontWoW-v${VERSION}.apk"
+          mkdir -p dist-apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk "dist-apk/${APK_NAME}"
+          echo "apk_name=${APK_NAME}" >> "$GITHUB_OUTPUT"
+          echo "apk_path=dist-apk/${APK_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Artifact (Immediate Workflow Download)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package_apk.outputs.apk_name }}
+          path: ${{ steps.package_apk.outputs.apk_path }}
+          retention-days: 14
+
+      - name: Generate Release Notes
+        id: release_notes
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          TAG="${{ steps.get_version.outputs.tag }}"
+          cat << 'EOF' > release_body.md
+          ## 📱 FontWoW Android APK Build
+
+          ### 🚀 Release Information
+          - **Version:** `${{ steps.get_version.outputs.version }}`
+          - **Tag:** `${{ steps.get_version.outputs.tag }}`
+          - **Commit:** `${{ github.sha }}`
+          - **Branch:** `${{ github.ref_name }}`
+
+          ### ✨ Key Enhancements in this Build:
+          - 🛡️ **Hardware Back Button Handling**: Smart navigation (closes sheets -> deselects layers -> double-tap to exit).
+          - 💾 **Native Media & GIF Gallery Export**: Direct saving of PNG and GIF into device Gallery without third-party sharing requirement.
+          - ⚡ **Tactile Haptic Feedback**: Subtle vibration on layer alignment snap points and export completion.
+          - 📝 **Multi-Line Typography Input**: Auto-expanding textarea for Persian poems, verses, and story captions.
+          - 🎨 **Vibe UI Integration**: Obsidian Glassmorphism 2.0 and elastic spring button physics.
+
+          ### 📥 Download & Install
+          Download `${{ steps.package_apk.outputs.apk_name }}` below and install it directly on your Android device.
+          EOF
+
+      - name: Publish GitHub Release
+        if: ${{ github.event_name == 'push' || github.event.inputs.publish_release == 'true' || github.event.inputs.publish_release == true }}
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.get_version.outputs.tag }}
+          name: FontWoW Android ${{ steps.get_version.outputs.tag }}
+          body_path: release_body.md
+          prerelease: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+          files: ${{ steps.package_apk.outputs.apk_path }}

@@ -1,7 +1,7 @@
 import { isNative } from './native'
 import { APP_VERSION } from './updates'
 
-const LATEST_RELEASE_API = 'https://api.github.com/repos/FontWoW/FontWoW.github.io/releases/tags/latest'
+const LATEST_RELEASE_API = 'https://api.github.com/repos/omid-io/FontWoW.github.io/releases/latest'
 const DISMISSED_KEY = 'fontwow_update_dismissed_version_v1'
 const LAST_CHECK_KEY = 'fontwow_update_last_check_v1'
 const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000

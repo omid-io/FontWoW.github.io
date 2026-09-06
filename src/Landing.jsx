@@ -7,11 +7,11 @@ import FontGoals from './FontGoals'
 import { STRINGS } from './strings'
 import './Landing.css'
 
-const REPO = 'https://github.com/FontWoW/FontWoW.github.io'
-const REPO_API = 'https://api.github.com/repos/FontWoW/FontWoW.github.io'
+const REPO = 'https://github.com/omid-io/FontWoW.github.io'
+const REPO_API = 'https://api.github.com/repos/omid-io/FontWoW.github.io'
 const CONTRIBUTORS_API = 'https://api.github.com/repos/FontWoW/FontWoW.github.io/contributors'
-const LATEST_RELEASE_API = 'https://api.github.com/repos/FontWoW/FontWoW.github.io/releases/tags/latest'
-const RELEASES_URL = `${REPO}/releases/tag/latest`
+const LATEST_RELEASE_API = 'https://api.github.com/repos/omid-io/FontWoW.github.io/releases/latest'
+const RELEASES_URL = `${REPO}/releases/latest`
 const APP_URL = '#/app'
 const CRYPTO_DONATE_URL = 'https://pay.oxapay.com/15417059'
 const TOMAN_DONATE_URL = 'https://daramet.com/fontwow'

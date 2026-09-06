@@ -5,9 +5,9 @@ import { APP_VERSION } from './updates'
 import './ShareKit.css'
 
 const SETTINGS_KEY = 'fontwow_app_settings_v1'
-const REPO = 'https://github.com/FontWoW/FontWoW.github.io'
-const LATEST_RELEASE_API = 'https://api.github.com/repos/FontWoW/FontWoW.github.io/releases/tags/latest'
-const RELEASES_URL = `${REPO}/releases/tag/latest`
+const REPO = 'https://github.com/omid-io/FontWoW.github.io'
+const LATEST_RELEASE_API = 'https://api.github.com/repos/omid-io/FontWoW.github.io/releases/latest'
+const RELEASES_URL = `${REPO}/releases/latest`
 
 function loadJSON(key, fallback) {
   try {

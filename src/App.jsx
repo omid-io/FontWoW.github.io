@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { toPng, toBlob } from 'html-to-image'
-import { isNative, saveImageNative, shareFileNative, copyImageNative, copyTextNative, openExternalUrl } from './native'
+import { isNative, saveImageNative, saveMediaNative, shareFileNative, copyImageNative, copyTextNative, openExternalUrl, registerHardwareBackHandler, triggerHaptic } from './native'
 import {
   FONTS,
   FONT_CATEGORIES,
@@ -558,6 +558,83 @@ export default function App() {
       window.removeEventListener('resize', updateSize)
     }
   }, [isControlsOpen])
+
+  const lastBackPressRef = useRef(0)
+  useEffect(() => {
+    return registerHardwareBackHandler(() => {
+      if (promptState) {
+        setPromptState(null)
+        return true
+      }
+      if (showSave) {
+        setShowSave(false)
+        return true
+      }
+      if (showGallery) {
+        setShowGallery(false)
+        return true
+      }
+      if (showSettings) {
+        setShowSettings(false)
+        return true
+      }
+      if (showDonate) {
+        setShowDonate(false)
+        return true
+      }
+      if (showChangelog) {
+        setShowChangelog(false)
+        return true
+      }
+      if (showAbout) {
+        setShowAbout(false)
+        return true
+      }
+      if (showDiagnostics) {
+        setShowDiagnostics(false)
+        return true
+      }
+      if (showGoogleFontsSearch) {
+        setShowGoogleFontsSearch(false)
+        return true
+      }
+      if (showStyleStudio) {
+        setShowStyleStudio(false)
+        return true
+      }
+      if (showLabelPicker) {
+        setShowLabelPicker(false)
+        return true
+      }
+      if (state.activeLayerId) {
+        update({ activeLayerId: null })
+        return true
+      }
+      const now = Date.now()
+      if (now - lastBackPressRef.current < 2000) {
+        return false
+      }
+      lastBackPressRef.current = now
+      setToast(t('backToExit') || 'برای خروج دوباره دکمه بازگشت را بزنید')
+      return true
+    })
+  }, [
+    promptState,
+    showSave,
+    showGallery,
+    showSettings,
+    showDonate,
+    showChangelog,
+    showAbout,
+    showDiagnostics,
+    showGoogleFontsSearch,
+    showStyleStudio,
+    showLabelPicker,
+    state.activeLayerId,
+    t,
+    update,
+  ])
+
 
   // Keep the selected layer id fresh for the once-bound keydown handler.
   const activeLayerIdRef = useRef(state.activeLayerId)
@@ -1923,6 +2000,7 @@ export default function App() {
       })
       if (isNative()) {
         await saveImageNative(dataUrl, fileName)
+        triggerHaptic('medium')
       } else {
         const link = document.createElement('a')
         link.download = fileName
@@ -1983,7 +2061,14 @@ export default function App() {
       const bytes = encoder.bytes()
       const fileName = `fontwow-${Date.now()}.gif`
       if (isNative()) {
-        await shareFileNative(bytesToBase64(bytes), fileName)
+        const base64Gif = bytesToBase64(bytes)
+        try {
+          await saveMediaNative(base64Gif, fileName, 'image/gif')
+          triggerHaptic('medium')
+        } catch (saveErr) {
+          logger.warn('Export', 'ذخیره مستقیم گیف در گالری ناموفق بود، باز کردن پنجره اشتراک', saveErr)
+          await shareFileNative(base64Gif, fileName)
+        }
       } else {
         const url = URL.createObjectURL(new Blob([bytes], { type: 'image/gif' }))
         const link = document.createElement('a')
@@ -2057,7 +2142,14 @@ export default function App() {
       const video = new Blob(chunks, { type: mimeType })
       const fileName = `fontwow-${Date.now()}.webm`
       if (isNative()) {
-        await shareFileNative(bytesToBase64(new Uint8Array(await video.arrayBuffer())), fileName)
+        const base64Video = bytesToBase64(new Uint8Array(await video.arrayBuffer()))
+        try {
+          await saveMediaNative(base64Video, fileName, mimeType)
+          triggerHaptic('medium')
+        } catch (saveErr) {
+          logger.warn('Export', 'ذخیره مستقیم ویدئو در گالری ناموفق بود، باز کردن پنجره اشتراک', saveErr)
+          await shareFileNative(base64Video, fileName)
+        }
       } else {
         const url = URL.createObjectURL(video)
         const link = document.createElement('a')

@@ -23,6 +23,7 @@ dist-ssr
 *.sw?
 release-notes.txt
 # Android / Capacitor
+dist-apk/*-debug.apk
 android/local.properties
 android/.gradle
 android/build

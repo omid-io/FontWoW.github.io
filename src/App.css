@@ -1251,14 +1251,19 @@
   background: var(--surface-2);
   border: 1px solid var(--border-1);
   color: var(--text-1);
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background var(--dur-fast) var(--ease-out);
+  transition: background var(--dur-fast) var(--ease-out), transform 0.12s var(--ease-spring);
+}
+
+.icon-btn:active {
+  transform: scale(0.92);
+  background: var(--border-2);
 }
 
 .sheet-item {
@@ -1276,10 +1281,16 @@
   font-size: 14.5px;
   cursor: pointer;
   text-decoration: none;
+  min-height: 48px;
+  box-sizing: border-box;
   transition:
     background var(--dur-fast) var(--ease-out),
     border-color var(--dur-fast) var(--ease-out),
-    transform var(--dur-fast) var(--ease-out);
+    transform 0.12s var(--ease-spring);
+}
+
+.sheet-item:active {
+  transform: scale(0.98);
 }
 
 .sheet-item svg {

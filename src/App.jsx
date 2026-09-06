@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { toPng, toBlob } from 'html-to-image'
-import { isNative, saveImageNative, shareFileNative, copyImageNative, copyTextNative, openExternalUrl } from './native'
+import { isNative, saveImageNative, saveMediaNative, shareFileNative, copyImageNative, copyTextNative, openExternalUrl, triggerHaptic, setupBackButton, exitAppNative } from './native'
 import {
   FONTS,
   FONT_CATEGORIES,
@@ -550,6 +550,62 @@ export default function App() {
     document.documentElement.lang = appSettings.lang
   }, [appSettings.lang])
 
+  const lastBackPressRef = useRef(0)
+
+  useEffect(() => {
+    const cleanup = setupBackButton(() => {
+      if (promptState) {
+        setPromptState(null)
+        return
+      }
+      if (showSave) { setShowSave(false); return }
+      if (showGallery) { setShowGallery(false); return }
+      if (showDonate) { setShowDonate(false); return }
+      if (showSettings) { setShowSettings(false); return }
+      if (showChangelog) { setShowChangelog(false); return }
+      if (showAbout) { setShowAbout(false); return }
+      if (showDiagnostics) { setShowDiagnostics(false); return }
+      if (showStyleStudio) { setShowStyleStudio(false); return }
+      if (showLabelPicker) { setShowLabelPicker(false); return }
+      if (showGoogleFontsSearch) { setShowGoogleFontsSearch(false); return }
+      if (showIOSPrompt) { setShowIOSPrompt(false); return }
+
+      if (state.activeLayerId) {
+        update({ activeLayerId: null }, { record: false })
+        return
+      }
+
+      const now = Date.now()
+      if (now - lastBackPressRef.current < 2000) {
+        exitAppNative()
+      } else {
+        lastBackPressRef.current = now
+        triggerHaptic('light')
+        setToast(t('pressBackAgainToExit'))
+      }
+    })
+
+    return () => {
+      if (typeof cleanup === 'function') cleanup()
+    }
+  }, [
+    promptState,
+    showSave,
+    showGallery,
+    showDonate,
+    showSettings,
+    showChangelog,
+    showAbout,
+    showDiagnostics,
+    showStyleStudio,
+    showLabelPicker,
+    showGoogleFontsSearch,
+    showIOSPrompt,
+    state.activeLayerId,
+    update,
+    t,
+  ])
+
   const updateLayer = useCallback((id, patch) => {
     update((current) => ({
       layers: current.layers.map((layer) => (layer.id === id ? { ...layer, ...patch } : layer)),
@@ -1071,6 +1127,7 @@ export default function App() {
   }
 
   function deleteLayer(id) {
+    triggerHaptic('light')
     update({
       layers: state.layers.filter((l) => l.id !== id),
       activeLayerId: null,
@@ -1088,6 +1145,8 @@ export default function App() {
     const origY = layer.y
     const SNAP = 2 // % of canvas width/height — snap zone around center + other layers
     const otherLayers = state.layers.filter((l) => l.id !== layer.id)
+    let hasSnapped = false
+
     function onMove(ev) {
       const dx = ((ev.clientX - startX) / rect.width) * 100
       const dy = ((ev.clientY - startY) / rect.height) * 100
@@ -1095,44 +1154,59 @@ export default function App() {
       let y = Math.min(95, Math.max(5, origY + dy))
       let guideX = null
       let guideY = null
+      let currentSnap = false
 
       if (Math.abs(x - 50) < SNAP) {
         x = 50
         guideX = rect.left + rect.width * 0.5
+        currentSnap = true
       } else {
         const match = otherLayers.find((l) => Math.abs(x - l.x) < SNAP)
         if (match) {
           x = match.x
           guideX = rect.left + (rect.width * match.x) / 100
+          currentSnap = true
         }
       }
 
       if (Math.abs(y - 50) < SNAP) {
         y = 50
         guideY = rect.top + rect.height * 0.5
+        currentSnap = true
       } else {
         const match = otherLayers.find((l) => Math.abs(y - l.y) < SNAP)
         if (match) {
           y = match.y
           guideY = rect.top + (rect.height * match.y) / 100
+          currentSnap = true
         }
       }
+
+      if (currentSnap && !hasSnapped) {
+        triggerHaptic('light')
+      }
+      hasSnapped = currentSnap
 
       updateLayer(layer.id, { x, y })
       setDragGuides({ x: guideX, y: guideY })
     }
+
     function onUp() {
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
       setDragGuides({ x: null, y: null })
     }
+
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
   }
 
   function duplicateLayer(id) {
     const layer = state.layers.find((l) => l.id === id)
     if (!layer) return
+    triggerHaptic('light')
     const newId = `layer-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
     const copy = { ...layer, id: newId, x: Math.min(95, Math.max(5, layer.x + 5)), y: Math.min(95, Math.max(5, layer.y + 5)) }
     update({ layers: [...state.layers, copy], activeLayerId: newId })
@@ -1420,7 +1494,8 @@ export default function App() {
         : 3
       const dataUrl = await toPng(node, { pixelRatio, cacheBust: false })
       if (isNative()) {
-        await saveImageNative(dataUrl, fileName)
+        await saveImageNative(dataUrl, fileName, 'image/png')
+        triggerHaptic('medium')
       } else {
         const link = document.createElement('a')
         link.download = fileName
@@ -1468,7 +1543,14 @@ export default function App() {
       const bytes = encoder.bytes()
       const fileName = `fontwow-${Date.now()}.gif`
       if (isNative()) {
-        await shareFileNative(bytesToBase64(bytes), fileName)
+        const base64Gif = bytesToBase64(bytes)
+        try {
+          await saveMediaNative(base64Gif, fileName, 'image/gif')
+          triggerHaptic('medium')
+        } catch (saveErr) {
+          logger.warn('Export', 'ذخیره مستقیم گیف در گالری ناموفق بود، باز کردن پنجره اشتراک', saveErr)
+          await shareFileNative(base64Gif, fileName)
+        }
       } else {
         const url = URL.createObjectURL(new Blob([bytes], { type: 'image/gif' }))
         const link = document.createElement('a')
@@ -1531,7 +1613,14 @@ export default function App() {
       const video = new Blob(chunks, { type: mimeType })
       const fileName = `fontwow-${Date.now()}.webm`
       if (isNative()) {
-        await shareFileNative(bytesToBase64(new Uint8Array(await video.arrayBuffer())), fileName)
+        const base64Video = bytesToBase64(new Uint8Array(await video.arrayBuffer()))
+        try {
+          await saveMediaNative(base64Video, fileName, mimeType)
+          triggerHaptic('medium')
+        } catch (saveErr) {
+          logger.warn('Export', 'ذخیره مستقیم ویدئو در گالری ناموفق بود، باز کردن پنجره اشتراک', saveErr)
+          await shareFileNative(base64Video, fileName)
+        }
       } else {
         const url = URL.createObjectURL(video)
         const link = document.createElement('a')

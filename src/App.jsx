@@ -806,7 +806,7 @@ export default function App() {
   useEffect(() => {
     if (!showAbout || donations || donationsError) return
     let cancelled = false
-    fetch('/donations.json')
+    fetch('./donations.json')
       .then((res) => {
         if (!res.ok) throw new Error('bad response')
         return res.json()

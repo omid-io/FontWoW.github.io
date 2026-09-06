@@ -491,6 +491,7 @@ export default function App() {
     ...defaultAppSettings,
     ...loadJSON(APP_SETTINGS_KEY, {}),
   }))
+  const t = useCallback((key) => STRINGS[appSettings.lang]?.[key] ?? STRINGS.fa[key] ?? key, [appSettings.lang])
   const [tab, setTab] = useState('font')
   const [isControlsOpen, setIsControlsOpen] = useState(false)
   const [fontLang, setFontLang] = useState('fa')
@@ -708,8 +709,6 @@ export default function App() {
       ...matchedAll.map(name => ({ family: name, category: 'General', weights: [] }))
     ]
   }, [searchQuery])
-
-  const t = useCallback((key) => STRINGS[appSettings.lang]?.[key] ?? STRINGS.fa[key] ?? key, [appSettings.lang])
 
   const allFonts = useMemo(() => [...FONTS, ...customFonts], [customFonts])
   const visibleFonts = useMemo(() => {

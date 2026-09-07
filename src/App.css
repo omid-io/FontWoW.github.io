@@ -973,7 +973,7 @@
   -webkit-overflow-scrolling: touch;
   scroll-behavior: smooth;
   gap: 6px;
-  padding: 2px 10px 8px;
+  padding: 2px;
   border-bottom: none;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.22) transparent;

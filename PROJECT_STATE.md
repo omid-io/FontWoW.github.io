@@ -16,10 +16,12 @@
 ## Completed in this Turn
 1. **UI Layout Refinement (`.controls-bar`)**:
    - Added `padding-left: 10px` and `padding-right: 10px` to `.controls-bar` in [src/App.css](file:///e:/programming/FontWoW/src/App.css#L954-L964) to ensure proper horizontal breathing room for controls tabs and tools.
+2. **Git Commit & Push**:
+   - Committed changes as `style(ui): add horizontal padding to controls-bar` (`46321a2`) and pushed to `origin/main` on GitHub.
 
 ## Modified Files Index
 - [src/App.css](file:///e:/programming/FontWoW/src/App.css#L954-L964) — Added horizontal padding to `.controls-bar`
 
 ## Immediate Next Steps
-1. Test and verify responsive spacing in mobile / desktop viewport.
-2. Commit and sync changes with remote repository when ready.
+1. Verify GitHub Pages automated workflow triggers and deploys the updated CSS bundle.
+2. Verify responsive spacing on live GitHub Pages / mobile editor.

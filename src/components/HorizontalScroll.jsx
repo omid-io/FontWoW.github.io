@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { IconChevronLeft, IconChevronRight } from '../icons'
 import './HorizontalScroll.css'
 
@@ -41,17 +41,17 @@ export default function HorizontalScroll({
   trackClassName = '',
   trackRef: externalRef,
   showChevrons = true,
-  step = 200,
+  step = 220,
   dragSensitivity = 1,
   ariaLabel = 'محتوای افقی',
   ...props
 }) {
+  const containerRef = useRef(null)
   const innerRef = useRef(null)
   const trackRef = externalRef || innerRef
 
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
-  const [isDragging, setIsDragging] = useState(false)
 
   const isDownRef = useRef(false)
   const startXRef = useRef(0)
@@ -92,11 +92,12 @@ export default function HorizontalScroll({
     trackRef.current.scrollBy({ left: step, behavior: 'smooth' })
   }
 
-  // Mouse Drag-to-Scroll handlers
-  const handleMouseDown = (e) => {
-    if (e.button !== 0) return // Only primary left click
-    // Skip interactive input/textarea elements
-    const tag = e.target.tagName.toLowerCase()
+  // Pointer drag handlers (Mouse & Pen only; touch devices retain 100% native gesture scrolling)
+  const handlePointerDown = (e) => {
+    if (e.pointerType === 'touch') return
+    if (e.button !== 0) return
+
+    const tag = e.target.tagName?.toLowerCase()
     if (tag === 'input' || tag === 'textarea' || tag === 'select') return
 
     const el = trackRef.current
@@ -104,36 +105,57 @@ export default function HorizontalScroll({
 
     isDownRef.current = true
     hasDraggedRef.current = false
-    startXRef.current = e.pageX - el.offsetLeft
+    startXRef.current = e.clientX
     scrollLeftRef.current = el.scrollLeft
+
+    try {
+      el.setPointerCapture(e.pointerId)
+    } catch (_) {}
   }
 
-  const handleMouseMove = (e) => {
+  const handlePointerMove = (e) => {
     if (!isDownRef.current) return
     const el = trackRef.current
     if (!el) return
 
-    const x = e.pageX - el.offsetLeft
-    const walk = (x - startXRef.current) * dragSensitivity
+    const deltaX = (e.clientX - startXRef.current) * dragSensitivity
 
-    if (Math.abs(walk) > 5) {
+    if (Math.abs(deltaX) > 4) {
       if (!hasDraggedRef.current) {
         hasDraggedRef.current = true
-        setIsDragging(true)
+        if (containerRef.current) {
+          containerRef.current.classList.add('is-dragging')
+        }
       }
       e.preventDefault()
-      el.scrollLeft = scrollLeftRef.current - walk
+      el.scrollLeft = scrollLeftRef.current - deltaX
     }
   }
 
-  const endDrag = () => {
+  const handlePointerUp = (e) => {
     if (!isDownRef.current) return
     isDownRef.current = false
-    // Delay clearing isDragging slightly so click capture handler sees it
-    setTimeout(() => {
-      setIsDragging(false)
-      hasDraggedRef.current = false
-    }, 50)
+
+    const el = trackRef.current
+    if (el) {
+      try {
+        el.releasePointerCapture(e.pointerId)
+      } catch (_) {}
+    }
+
+    if (hasDraggedRef.current) {
+      // Delay removing .is-dragging slightly to ensure any imminent synthetic click is suppressed
+      setTimeout(() => {
+        if (containerRef.current) {
+          containerRef.current.classList.remove('is-dragging')
+        }
+        hasDraggedRef.current = false
+      }, 50)
+    } else {
+      if (containerRef.current) {
+        containerRef.current.classList.remove('is-dragging')
+      }
+    }
   }
 
   const handleCaptureClick = (e) => {
@@ -157,7 +179,8 @@ export default function HorizontalScroll({
 
   return (
     <div
-      className={`hz-scroll-container ${isDragging ? 'is-dragging' : ''} ${className}`}
+      ref={containerRef}
+      className={`hz-scroll-container ${className}`}
       {...props}
     >
       {showChevrons && (
@@ -189,10 +212,10 @@ export default function HorizontalScroll({
       <div
         ref={trackRef}
         className={`hz-scroll-track ${trackClassName}`}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={endDrag}
-        onMouseLeave={endDrag}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
         onClickCapture={handleCaptureClick}
         onWheel={handleWheel}
         role="region"

@@ -971,7 +971,6 @@
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
-  scroll-behavior: smooth;
   gap: 6px;
   padding: 2px;
   border-bottom: none;

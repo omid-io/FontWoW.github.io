@@ -32,6 +32,7 @@ import PromptSheet from './PromptSheet'
 import MediaSupporters from './MediaSupporters'
 import FontGoals from './FontGoals'
 import logger from './logger'
+import HorizontalScroll from './components/HorizontalScroll'
 import './App.css'
 import './Landing.css'
 
@@ -2758,7 +2759,12 @@ export default function App() {
         </div>
 
         <div className="controls-bar">
-          <div className="tabs" ref={tabsRef}>
+          <HorizontalScroll
+            className="controls-tabs-scroll"
+            trackClassName="tabs"
+            trackRef={tabsRef}
+            ariaLabel="تب‌های تنظیمات"
+          >
             <span className="tab-indicator" aria-hidden="true" />
             {TABS.map((tb) => (
               <button
@@ -2778,7 +2784,7 @@ export default function App() {
                 <span className="tab-label-text">{tb.label}</span>
               </button>
             ))}
-          </div>
+          </HorizontalScroll>
         </div>
 
         <div className="panel" key={tab}>
@@ -2823,7 +2829,7 @@ export default function App() {
           )}
           {tab === 'font' && (
             <>
-              <div className="chip-row sub-row">
+              <HorizontalScroll trackClassName="chip-row sub-row" ariaLabel="دسته‌بندی فونت‌ها">
                 {FONT_CATEGORIES.map((c) => (
                   <button
                     key={c.id}
@@ -2833,8 +2839,8 @@ export default function App() {
                     {c.label}
                   </button>
                 ))}
-              </div>
-              <div className="chip-row">
+              </HorizontalScroll>
+              <HorizontalScroll trackClassName="chip-row" ariaLabel="فهرست فونت‌ها">
                 {visibleFonts.map((f) => {
                   const isPinned = pinnedFontIds.includes(f.id)
                   return (
@@ -2903,7 +2909,7 @@ export default function App() {
                     <span className="chip-label">{t('addGoogleFont')}</span>
                   </div>
                 </button>
-              </div>
+              </HorizontalScroll>
             </>
           )}
 
@@ -2930,7 +2936,7 @@ export default function App() {
                 />
               </div>
 
-              <div className="text-color-row">
+              <HorizontalScroll trackClassName="text-color-row" ariaLabel="رنگ متن">
                 <label className="text-color-swatch text-color-custom" title="انتخاب رنگ دلخواه">
                   <input
                     type="color"
@@ -2958,7 +2964,7 @@ export default function App() {
                     title={c}
                   />
                 ))}
-              </div>
+              </HorizontalScroll>
 
               <div className="box-section-header">
                 <span className="settings-label" style={{ margin: 0 }}>
@@ -3281,7 +3287,7 @@ export default function App() {
 
                   <div className="box-control-block">
                     <span className="box-control-label">{t('boxBgColor')}</span>
-                    <div className="box-color-row">
+                    <HorizontalScroll trackClassName="box-color-row" ariaLabel="رنگ پس‌زمینه کادر">
                       {[
                         {
                           label: 'پیش‌فرض استایل',
@@ -3329,7 +3335,7 @@ export default function App() {
                         />
                         <I.IconPalette size={13} />
                       </label>
-                    </div>
+                    </HorizontalScroll>
                   </div>
 
                   <div className="box-sliders-row">
@@ -3451,7 +3457,7 @@ export default function App() {
                   </div>
 
                   {/* Swatches Row (Single line, minimal) */}
-                  <div className="bg-swatches-row">
+                  <HorizontalScroll trackClassName="bg-swatches-row" ariaLabel="پالت‌های پس‌زمینه">
                     {/* Category specific dynamic buttons */}
 
                     {/* 1. Solid / Colors: + button is a Color Picker */}
@@ -3549,7 +3555,7 @@ export default function App() {
                         title={b.label}
                       />
                     ))}
-                  </div>
+                  </HorizontalScroll>
 
                   {/* Gradient Builder Panel */}
                   {bgCategory === 'gradients' && showGradientBuilder && (
@@ -3836,7 +3842,7 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="label-category-pills">
+              <HorizontalScroll trackClassName="label-category-pills" className="label-category-pills-scroll" ariaLabel="دسته‌بندی برچسب‌ها">
                 {LABEL_CATEGORIES.map((cat) => (
                   <button
                     key={cat.id}
@@ -3847,7 +3853,7 @@ export default function App() {
                     {t(cat.labelKey)}
                   </button>
                 ))}
-              </div>
+              </HorizontalScroll>
 
               <div className="label-asset-grid">
                 {visibleLabelAssets.map((asset) => (
@@ -4084,7 +4090,7 @@ export default function App() {
 
       {showLabelPicker && (
         <Sheet title={t('labelAssets')} onClose={() => setShowLabelPicker(false)}>
-          <div className="label-category-pills in-sheet">
+          <HorizontalScroll trackClassName="label-category-pills in-sheet" className="label-category-pills-scroll in-sheet" ariaLabel="دسته‌بندی برچسب‌ها">
             {LABEL_CATEGORIES.map((cat) => (
               <button
                 key={cat.id}
@@ -4095,7 +4101,7 @@ export default function App() {
                 {t(cat.labelKey)}
               </button>
             ))}
-          </div>
+          </HorizontalScroll>
           <div className="label-asset-grid">
             {visibleLabelAssets.map((asset) => (
               <button

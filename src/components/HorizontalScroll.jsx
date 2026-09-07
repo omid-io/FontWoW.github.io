@@ -57,6 +57,7 @@ export default function HorizontalScroll({
   const startXRef = useRef(0)
   const scrollLeftRef = useRef(0)
   const hasDraggedRef = useRef(false)
+  const suppressClickRef = useRef(false)
 
   const updateScrollState = useCallback(() => {
     const el = trackRef.current
@@ -82,6 +83,59 @@ export default function HorizontalScroll({
     }
   }, [trackRef, updateScrollState])
 
+  // Global window pointermove and pointerup so dragging is smooth and clicks on children work cleanly
+  useEffect(() => {
+    const onPointerMove = (e) => {
+      if (!isDownRef.current) return
+      const el = trackRef.current
+      if (!el) return
+
+      const deltaX = (e.clientX - startXRef.current) * dragSensitivity
+
+      if (Math.abs(deltaX) > 6) {
+        if (!hasDraggedRef.current) {
+          hasDraggedRef.current = true
+          suppressClickRef.current = true
+          if (containerRef.current) {
+            containerRef.current.classList.add('is-dragging')
+          }
+        }
+        el.scrollLeft = scrollLeftRef.current - deltaX
+      }
+    }
+
+    const onPointerUp = () => {
+      if (!isDownRef.current) return
+      isDownRef.current = false
+
+      if (hasDraggedRef.current) {
+        // Keep suppressClickRef true briefly so immediate click event is absorbed
+        setTimeout(() => {
+          if (containerRef.current) {
+            containerRef.current.classList.remove('is-dragging')
+          }
+          hasDraggedRef.current = false
+          suppressClickRef.current = false
+        }, 50)
+      } else {
+        if (containerRef.current) {
+          containerRef.current.classList.remove('is-dragging')
+        }
+        suppressClickRef.current = false
+      }
+    }
+
+    window.addEventListener('pointermove', onPointerMove, { passive: true })
+    window.addEventListener('pointerup', onPointerUp)
+    window.addEventListener('pointercancel', onPointerUp)
+
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove)
+      window.removeEventListener('pointerup', onPointerUp)
+      window.removeEventListener('pointercancel', onPointerUp)
+    }
+  }, [dragSensitivity, trackRef])
+
   const scrollLeft = () => {
     if (!trackRef.current) return
     trackRef.current.scrollBy({ left: -step, behavior: 'smooth' })
@@ -92,10 +146,9 @@ export default function HorizontalScroll({
     trackRef.current.scrollBy({ left: step, behavior: 'smooth' })
   }
 
-  // Pointer drag handlers (Mouse & Pen only; touch devices retain 100% native gesture scrolling)
   const handlePointerDown = (e) => {
-    if (e.pointerType === 'touch') return
-    if (e.button !== 0) return
+    if (e.pointerType === 'touch') return // Let mobile browsers use native touch
+    if (e.button !== 0) return // Left click only
 
     const tag = e.target.tagName?.toLowerCase()
     if (tag === 'input' || tag === 'textarea' || tag === 'select') return
@@ -105,61 +158,13 @@ export default function HorizontalScroll({
 
     isDownRef.current = true
     hasDraggedRef.current = false
+    suppressClickRef.current = false
     startXRef.current = e.clientX
     scrollLeftRef.current = el.scrollLeft
-
-    try {
-      el.setPointerCapture(e.pointerId)
-    } catch (_) {}
-  }
-
-  const handlePointerMove = (e) => {
-    if (!isDownRef.current) return
-    const el = trackRef.current
-    if (!el) return
-
-    const deltaX = (e.clientX - startXRef.current) * dragSensitivity
-
-    if (Math.abs(deltaX) > 4) {
-      if (!hasDraggedRef.current) {
-        hasDraggedRef.current = true
-        if (containerRef.current) {
-          containerRef.current.classList.add('is-dragging')
-        }
-      }
-      e.preventDefault()
-      el.scrollLeft = scrollLeftRef.current - deltaX
-    }
-  }
-
-  const handlePointerUp = (e) => {
-    if (!isDownRef.current) return
-    isDownRef.current = false
-
-    const el = trackRef.current
-    if (el) {
-      try {
-        el.releasePointerCapture(e.pointerId)
-      } catch (_) {}
-    }
-
-    if (hasDraggedRef.current) {
-      // Delay removing .is-dragging slightly to ensure any imminent synthetic click is suppressed
-      setTimeout(() => {
-        if (containerRef.current) {
-          containerRef.current.classList.remove('is-dragging')
-        }
-        hasDraggedRef.current = false
-      }, 50)
-    } else {
-      if (containerRef.current) {
-        containerRef.current.classList.remove('is-dragging')
-      }
-    }
   }
 
   const handleCaptureClick = (e) => {
-    if (hasDraggedRef.current) {
+    if (suppressClickRef.current) {
       e.preventDefault()
       e.stopPropagation()
     }
@@ -181,6 +186,7 @@ export default function HorizontalScroll({
     <div
       ref={containerRef}
       className={`hz-scroll-container ${className}`}
+      onClickCapture={handleCaptureClick}
       {...props}
     >
       {showChevrons && (
@@ -213,10 +219,6 @@ export default function HorizontalScroll({
         ref={trackRef}
         className={`hz-scroll-track ${trackClassName}`}
         onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
-        onClickCapture={handleCaptureClick}
         onWheel={handleWheel}
         role="region"
         aria-label={ariaLabel}

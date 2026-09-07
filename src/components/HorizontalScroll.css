@@ -35,10 +35,6 @@
   -webkit-user-select: none !important;
 }
 
-.hz-scroll-container.is-dragging .hz-scroll-track * {
-  pointer-events: none !important;
-}
-
 /* Smart Edge Gradient Fades */
 .hz-scroll-fade {
   position: absolute;

@@ -959,6 +959,8 @@
   width: 100%;
   min-width: 0;
   flex-shrink: 0;
+  padding-left: 10px;
+  padding-right: 10px;
 }
 
 .controls-bar .tabs {
